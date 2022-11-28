@@ -64,7 +64,7 @@ func ResourceIPFirewallFilter() *schema.Resource {
 			Type:         schema.TypeString,
 			Optional:     true,
 			Description:  "Can match connections that are srcnatted, dstnatted or both.",
-			ValidateFunc: validation.StringInSlice([]string{"srcnat", "dstnat"}, false),
+			ValidateFunc: validation.StringInSlice([]string{"srcnat", "dstnat", "!srcnat", "!dstnat"}, false),
 		},
 		// See comment for the "path_cost" field in resource_interface_bridge_port.go file.
 		"connection_rate": {
