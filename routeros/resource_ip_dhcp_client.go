@@ -16,7 +16,6 @@ func ResourceDhcpClient() *schema.Resource {
 			Optional:     true,
 			Computed:     true,
 			Description:  "Whether to install default route in routing table received from DHCP server.",
-			ValidateFunc: validation.StringInSlice([]string{"yes", "no", "special-classless"}, false),
 		},
 		"address": {
 			Type:        schema.TypeString,
