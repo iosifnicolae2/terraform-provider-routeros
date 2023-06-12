@@ -7,10 +7,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
-// ResourceIPFirewallFilter https://wiki.mikrotik.com/wiki/Manual:IP/Firewall/Filter
-func ResourceIPFirewallFilter() *schema.Resource {
+// ResourceIPv6FirewallFilter https://help.mikrotik.com/docs/display/ROS/Filter#Filter-Properties.1
+func ResourceIPv6FirewallFilter() *schema.Resource {
 	resSchema := map[string]*schema.Schema{
-		MetaResourcePath: PropResourcePath("/ip/firewall/filter"),
+		MetaResourcePath: PropResourcePath("/ipv6/firewall/filter"),
 		MetaId:           PropId(Id),
 
 		"action": {
@@ -18,14 +18,18 @@ func ResourceIPFirewallFilter() *schema.Resource {
 			Required:    true,
 			Description: "Action to take if a packet is matched by the rule",
 			ValidateFunc: validation.StringInSlice([]string{
-				"accept", "add-dst-to-address-list", "add-src-to-address-list", "drop", "fasttrack-connection",
-				"jump", "log", "passthrough", "reject", "return", "tarpit",
+				"accept", "add-dst-to-address-list", "add-src-to-address-list", "drop",
+				"jump", "log", "passthrough", "reject", "return",
 			}, false),
 		},
+		// Mikrotik v7.7 response - 400: 'Bad Request' (invalid time value for argument address-list-timeout)
+		// request body:  {"action":"drop","address-list-timeout":"none-dynamic", ...}
+		// The default value is empty and the field is Computed.
 		"address_list_timeout": {
 			Type:     schema.TypeString,
 			Optional: true,
-			Default:  "none-dynamic",
+			Computed: true,
+			// Default:  "none-dynamic",
 			Description: "Time interval after which the address will be removed from the address list specified by " +
 				"address-list parameter. Used in conjunction with add-dst-to-address-list or add-src-to-address-list " +
 				"actions.",
@@ -61,12 +65,7 @@ func ResourceIPFirewallFilter() *schema.Resource {
 			Description: "Matches packets marked via mangle facility with particular connection mark. If no-mark is " +
 				"set, rule will match any unmarked connection.",
 		},
-		"connection_nat_state": {
-			Type:         schema.TypeString,
-			Optional:     true,
-			Description:  "Can match connections that are srcnatted, dstnatted or both.",
-			ValidateFunc: validation.StringInSlice([]string{"srcnat", "dstnat", "!srcnat", "!dstnat"}, false),
-		},
+		// No NAT for IPv6.
 		// See comment for the "path_cost" field in resource_interface_bridge_port.go file.
 		"connection_rate": {
 			Type:     schema.TypeString,
@@ -130,24 +129,16 @@ func ResourceIPFirewallFilter() *schema.Resource {
 			Description: "List of destination port numbers or port number ranges.",
 		},
 		KeyDynamic: PropDynamicRo,
-		"fragment": {
-			Type:     schema.TypeBool,
-			Optional: true,
-			Description: "Matches fragmented packets. First (starting) fragment does not count. If connection tracking " +
-				"is enabled there will be no fragments as system automatically assembles every packet",
-		},
-		"hotspot": {
-			Type:             schema.TypeString,
-			Optional:         true,
-			Description:      "Matches packets received from HotSpot clients against various HotSpot matchers.",
-			ValidateDiagFunc: ValidationMultiValInSlice([]string{"auth", "from-client", "http", "local-dst", "to-client"}, false, true),
-		},
-		// https://help.mikrotik.com/docs/display/ROS/L3+Hardware+Offloading#L3HardwareOffloading-RoutingFilters
-		// Firewall filter rules have hw-offload option for Fasttrack, allowing fine-tuning connection offloading.
-		"hw_offload": {
-			Type:        schema.TypeBool,
+		// No fragment, hotspot, hw-offload.
+		"headers": {
+			Type:        schema.TypeString,
 			Optional:    true,
-			Description: "Connection offloading for Fasttrack.",
+			Description: "Extension headers. Look at the Extras tab in the v6 filter rules.",
+		},
+		"hop_limit": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "IPv6 TTL. Look at the Extras tab in the v6 filter rules.",
 		},
 		"icmp_options": {
 			Type:        schema.TypeString,
@@ -193,25 +184,12 @@ func ResourceIPFirewallFilter() *schema.Resource {
 			ValidateFunc: validation.StringMatch(regexp.MustCompile(`^(in|out)\s?,\s?(ipsec|none)$`),
 				"Value must be written in the following format: direction, policy."),
 		},
-		"ipv4_options": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Matches IPv4 header options.",
-			ValidateFunc: validation.StringInSlice([]string{
-				"any", "loose-source-routing", "no-record-route", "no-router-alert", "no-source-routing",
-				"no-timestamp", "none", "record-route", "router-alert", "strict-source-routing", "timestamp",
-			}, false),
-		},
 		"jump_target": {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "Name of the target chain to jump to. Applicable only if action=jump.",
 		},
-		"layer7_protocol": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Layer7 filter name.",
-		},
+		// No layer7-protocol.
 		"limit": {
 			Type:     schema.TypeString,
 			Optional: true,
@@ -299,12 +277,7 @@ func ResourceIPFirewallFilter() *schema.Resource {
 			Optional:    true,
 			Description: "Matches particular IP protocol specified by protocol name or number.",
 		},
-		"psd": {
-			Type:     schema.TypeString,
-			Optional: true,
-			Description: "Attempts to detect TCP and UDP scans. Parameters are in the following format WeightThreshold, " +
-				"DelayThreshold, LowPortWeight, HighPortWeight.",
-		},
+		// No psd.
 		"random": {
 			Type:         schema.TypeInt,
 			Optional:     true,
@@ -320,11 +293,12 @@ func ResourceIPFirewallFilter() *schema.Resource {
 				"icmp-network-unreachable", "tcp-reset", "icmp-host-unreachable", "icmp-port-unreachable",
 			}, false),
 		},
-		"routing_table": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Matches packets which destination address is resolved in specific a routing table.",
-		},
+		// Was removed? No information.
+		// "routing_table": {
+		// 	Type:        schema.TypeString,
+		// 	Optional:    true,
+		// 	Description: "Matches packets which destination address is resolved in specific a routing table.",
+		// },
 		"routing_mark": {
 			Type:        schema.TypeString,
 			Optional:    true,
@@ -378,11 +352,7 @@ func ResourceIPFirewallFilter() *schema.Resource {
 			Optional:    true,
 			Description: "Allows matching HTTPS traffic based on TLS SNI hostname.",
 		},
-		"ttl": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Matches packets TTL value.",
-		},
+		// No TTL.
 	}
 	return &schema.Resource{
 		CreateContext: DefaultCreate(resSchema),

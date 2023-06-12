@@ -1,4 +1,8 @@
-# Terraform Provider RouterOS
+# Warning
+This repository is switched to archive mode, since the main changes have been transferred to the [**parent repository**](https://github.com/GNewbury1/terraform-provider-routeros) and all current development will take place in it.
+
+
+## Terraform Provider RouterOS
 
 ![module testing workflow](https://github.com/vaerh/terraform-provider-routeros/actions/workflows/module_testing.yml/badge.svg?branch=main)
 
@@ -36,11 +40,11 @@ For more in-depth documentation about each of the resources and datasources, ple
 
 ### Tested RouterOS versions
 
-- go 1.17 and ROS 7.5 (stable)
+- go 1.19 and ROS 7.5, 7.6, 7.7 (stable)
 
 ## Changelog
 
-For a detailed changelog, please see the [changelog](CHANGELOG.md).
+For a detailed changelog, please see the [changelog](https://github.com/vaerh/terraform-provider-routeros/releases).
 
 ## Contributing
 This version of the module greatly simplifies the process of adding new resources.
