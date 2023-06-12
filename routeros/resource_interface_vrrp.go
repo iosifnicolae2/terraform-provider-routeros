@@ -1,10 +1,11 @@
 package routeros
 
 import (
+	"regexp"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"regexp"
 )
 
 /*
@@ -56,7 +57,7 @@ func ResourceInterfaceVrrp() *schema.Resource {
 		"group_master": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Default:     "none",
+			Computed:    true,
 			Description: "Allows combining multiple VRRP interfaces to maintain the same VRRP status within the group.",
 			// Maybe this is a bug, but for the 'none' value, the Mikrotik ROS 7.5 returns an empty string.
 			DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
@@ -83,12 +84,9 @@ func ResourceInterfaceVrrp() *schema.Resource {
 			Type:     schema.TypeBool,
 			Computed: true,
 		},
-		"mac_address": {
-			Type:     schema.TypeString,
-			Computed: true,
-		},
-		KeyMtu:  PropMtuRw(),
-		KeyName: PropNameRw,
+		KeyMacAddress: PropMacAddressRo,
+		KeyMtu:        PropMtuRw(),
+		KeyName:       PropNameForceNewRw,
 		"on_fail": {
 			Type:        schema.TypeString,
 			Optional:    true,

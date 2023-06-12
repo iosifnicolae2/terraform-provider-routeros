@@ -16,11 +16,21 @@ func ResourceIPRoute() *schema.Resource {
 			Computed:    true,
 			Description: "A flag indicates whether the route is elected as Active and eligible to be added to the FIB.",
 		},
+		// If the parameter is present in the request, the MT automatically marks the route as a blackhole.
+		// To solve this problem, let's remove the default value and the parameter will be present in the query
+		// only when explicitly specified in the configuration.
 		"blackhole": {
-			Type:        schema.TypeBool,
-			Optional:    true,
-			Default:     false,
-			Description: "It's a blackhole route.",
+			Type:     schema.TypeBool,
+			Optional: true,
+			Description: "It's a blackhole route. If you need to cancel route marking, then simply delete the " +
+				"parameter from the configuration of the TF. The value of the parameter (true or false) has no " +
+				"effect on the MT processing logic.",
+		},
+		"check_gateway": {
+			Type:         schema.TypeString,
+			Optional:     true,
+			Description:  "Currently used check-gateway option.",
+			ValidateFunc: validation.StringInSlice([]string{"arp", "bfd", "bfd-multihop", "none", "ping"}, false),
 		},
 		KeyComment: PropCommentRw,
 		"dhcp": {
@@ -28,6 +38,7 @@ func ResourceIPRoute() *schema.Resource {
 			Computed:    true,
 			Description: "A flag indicates whether the route was added by the DHCP service.",
 		},
+		KeyDisabled: PropDisabledRw,
 		"distance": {
 			Type:         schema.TypeInt,
 			Optional:     true,
@@ -37,7 +48,8 @@ func ResourceIPRoute() *schema.Resource {
 		},
 		"dst_address": {
 			Type:         schema.TypeString,
-			Required:     true,
+			Optional:     true,
+			Default:      "0.0.0.0/0", // Without the default setting, a non-empty plan is returned.
 			Description:  "IP prefix of route, specifies destination addresses that this route can be used for.",
 			ValidateFunc: validation.IsCIDR,
 		},

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 const testInterfaceIPv6AddressAddress = "routeros_ipv6_address.test_v6_address"
@@ -71,7 +71,13 @@ resource "routeros_ipv6_address" "test_v6_address" {
 	no_dad		= true
 	// address		= "::1/64"
 	// from_pool 	= "pool1"
-  }
+}
 
+resource "routeros_ip_route" "d2_rmark_isp22" {
+	distance      = 2
+	gateway       = "10.10.10.1"
+	routing_table = "main"
+	target_scope  = 12
+}
 `
 }

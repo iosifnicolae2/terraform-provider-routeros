@@ -107,6 +107,21 @@ func ResourceInterfaceBridgePort() *schema.Resource {
 			Type:     schema.TypeString,
 			Computed: true,
 		},
+		"designated_bridge": {
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: "Root bridge ID (bridge priority and the bridge MAC address).",
+		},
+		"designated_cost": {
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: "Designated cost.",
+		},
+		"designated_port_number": {
+			Type:        schema.TypeInt,
+			Computed:    true,
+			Description: "Designated port number.",
+		},
 		KeyDisabled: PropDisabledRw,
 		KeyDynamic:  PropDynamicRo,
 		"edge": {
@@ -163,13 +178,15 @@ func ResourceInterfaceBridgePort() *schema.Resource {
 				"feature that disables hardware offloading. This value is integer '0'..'429496729' or 'none'.",
 		},
 		"hw": {
-			Type:     schema.TypeBool,
-			Computed: true,
-			Optional: true,
+			Type:        schema.TypeBool,
+			Computed:    true,
+			Optional:    true,
+			Description: "Enable or disable Hardware Offloading of the interface.",
 		},
 		"hw_offload": {
-			Type:     schema.TypeBool,
-			Computed: true,
+			Type:        schema.TypeBool,
+			Computed:    true,
+			Description: "Hardware offloading state.",
 		},
 		"hw_offload_group": {
 			Type:        schema.TypeString,
@@ -281,6 +298,12 @@ func ResourceInterfaceBridgePort() *schema.Resource {
 			Type:        schema.TypeString,
 			Computed:    true,
 			Description: "(R/M)STP algorithm assigned role of the port",
+		},
+		// https://wiki.mikrotik.com/wiki/Manual:Interface/Bridge#Bridge_Monitoring
+		"root_path_cost": {
+			Type:        schema.TypeInt,
+			Computed:    true,
+			Description: "The total cost of the path to the root-bridge.",
 		},
 		"sending_rstp": {
 			Type:     schema.TypeString,

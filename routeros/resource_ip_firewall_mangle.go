@@ -1,8 +1,10 @@
 package routeros
 
 import (
+	"context"
 	"regexp"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
@@ -27,6 +29,7 @@ func ResourceIPFirewallMangle() *schema.Resource {
 	resSchema := map[string]*schema.Schema{
 		MetaResourcePath: PropResourcePath("/ip/firewall/mangle"),
 		MetaId:           PropId(Id),
+		MetaSkipFields:   PropSkipFields(``),
 
 		"action": {
 			Type:        schema.TypeString,
@@ -35,7 +38,7 @@ func ResourceIPFirewallMangle() *schema.Resource {
 			ValidateFunc: validation.StringInSlice([]string{
 				"accept", "add-dst-to-address-list", "add-src-to-address-list", "change-dscp", "change-mss",
 				"change-ttl", "clear-df", "fasttrack-connection", "jump", "log", "mark-connection", "mark-packet",
-				"mark-routing", "passthrough ", "return", "route", "set-priority", "sniff-pc", "sniff-tzsp",
+				"mark-routing", "passthrough", "return", "route", "set-priority", "sniff-pc", "sniff-tzsp",
 				"strip-ipv4-options",
 			}, false),
 		},
@@ -259,14 +262,16 @@ func ResourceIPFirewallMangle() *schema.Resource {
 			ValidateFunc: validation.IntBetween(0, 63),
 		},
 		"new_mss": {
-			Type:     schema.TypeInt,
+			Type:     schema.TypeString,
 			Optional: true,
 			Description: `Sets a new MSS for a packet.  
-	> Clampt-to-pmtu feature sets (DF) bit in the IP header to dynamically discover the PMTU of a path.  
+	> clamp-to-pmtu feature sets (DF) bit in the IP header to dynamically discover the PMTU of a path.  
 	> Host sends all datagrams on that path with the DF bit set until receives ICMP.  
 	> Destination Unreachable messages with a code meaning "fragmentation needed and DF set".    
 	> Upon receipt of such a message, the source host reduces its assumed PMTU for the path.  
 `,
+			ValidateFunc: validation.StringMatch(regexp.MustCompile(`^(\d+|clamp-to-pmtu)$`),
+				`Value must be a number in quotes or the string "clamp-to-pmtu".`),
 		},
 		"new_packet_mark": {
 			Type:        schema.TypeString,
@@ -437,7 +442,14 @@ func ResourceIPFirewallMangle() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: DefaultCreate(resSchema),
 		ReadContext:   DefaultRead(resSchema),
-		UpdateContext: DefaultUpdate(resSchema),
+		UpdateContext: func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+			resSchema[MetaSkipFields].Default = `"place_before"`
+			defer func() {
+				resSchema[MetaSkipFields].Default = ``
+			}()
+
+			return ResourceUpdate(ctx, resSchema, d, m)
+		},
 		DeleteContext: DefaultDelete(resSchema),
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,

@@ -2,8 +2,6 @@ package routeros
 
 import (
 	"context"
-	"crypto/sha1"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -37,7 +35,6 @@ func ResourceDns() *schema.Resource {
 		"allow_remote_requests": {
 			Type:        schema.TypeBool,
 			Optional:    true,
-			Computed:    true,
 			Description: "Specifies whether to allow network requests.",
 		},
 		"cache_max_ttl": {
@@ -60,6 +57,25 @@ func ResourceDns() *schema.Resource {
 			Type:        schema.TypeInt,
 			Computed:    true,
 			Description: "Shows the currently used cache size in KiB.",
+		},
+		"doh_max_concurrent_queries": {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Computed:    true,
+			Description: "Specifies how many DoH concurrent queries are allowed.",
+		},
+		"doh_max_server_connections": {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Computed:    true,
+			Description: "Specifies how many concurrent connections to the DoH server are allowed.",
+		},
+		"doh_timeout": {
+			Type:             schema.TypeString,
+			Optional:         true,
+			Computed:         true,
+			Description:      "Specifies how long to wait for query response from the DoH server.",
+			DiffSuppressFunc: TimeEquall,
 		},
 		"dynamic_servers": {
 			Type:        schema.TypeString,
@@ -107,13 +123,11 @@ func ResourceDns() *schema.Resource {
 		"servers": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Computed:    true,
 			Description: "List of DNS server IPv4/IPv6 addresses.",
 		},
 		"use_doh_server": {
 			Type:     schema.TypeString,
 			Optional: true,
-			Computed: true,
 			Description: `DNS over HTTPS (DoH) server URL.
 	> Mikrotik strongly suggest not use third-party download links for certificate fetching. 
 	Use the Certificate Authority's own website.
@@ -123,58 +137,44 @@ func ResourceDns() *schema.Resource {
 		"verify_doh_cert": {
 			Type:        schema.TypeBool,
 			Optional:    true,
-			Computed:    true,
 			Description: "DoH certificate verification. [See docs](https://wiki.mikrotik.com/wiki/Manual:IP/DNS#DNS_over_HTTPS).",
 		},
-	}
-
-	resRead := func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-		metadata := GetMetadata(resSchema)
-
-		res := MikrotikItem{}
-		err := m.(Client).SendRequest(crudRead, &URL{Path: metadata.Path}, nil, &res)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-
-		hash := fmt.Sprintf("%x", sha1.Sum([]byte(metadata.Path)))
-
-		d.SetId(hash)
-
-		return MikrotikResourceDataToTerraform(res, resSchema, d)
-	}
-
-	resUpdate := func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-		item, metadata := TerraformResourceDataToMikrotik(resSchema, d)
-
-		var resUrl string
-		if m.(Client).GetTransport() == TransportREST {
-			// https://router/rest/ip/dns/set
-			resUrl = "/set"
-		}
-
-		// Used POST request!
-		err := m.(Client).SendRequest(crudPost, &URL{Path: metadata.Path + resUrl}, item, nil)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-
-		return resRead(ctx, d, m)
 	}
 
 	return &schema.Resource{
 		Description: "A MikroTik router with DNS feature enabled can be set as a DNS server for any DNS-compliant client.",
 
-		CreateContext: resUpdate,
-		ReadContext:   resRead,
-		UpdateContext: resUpdate,
+		CreateContext: DefaultSystemCreate(resSchema),
+		ReadContext:   DefaultSystemRead(resSchema),
+		UpdateContext: DefaultSystemUpdate(resSchema),
+		// This behavior when deleting a system resource is the exception rather than the rule.
+		// With existing serialization logic, the best way to avoid undefined DNS service state
+		// is to clear the main fields.
 		DeleteContext: func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-			// No delete functionality provided by API for System Identity.
-			// Delete function will remove the object from the Terraform state
-			d.SetId("")
-			return DeleteSystemObject
-		},
+			// Values in the Mikrotik notation!
+			resetFileds := map[string]string{
+				"allow-remote-requests": "no",
+				"servers":               "",
+				"use-doh-server":        "",
+				"verify-doh-cert":       "no",
+			}
 
+			var resUrl string
+			if m.(Client).GetTransport() == TransportREST {
+				// https://router/rest/ip/dns/set
+				resUrl = "/set"
+			}
+
+			// Used POST request!
+			err := m.(Client).SendRequest(crudPost, &URL{Path: resSchema[MetaResourcePath].Default.(string) + resUrl},
+				resetFileds, nil)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+
+			d.SetId("")
+			return nil
+		},
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},

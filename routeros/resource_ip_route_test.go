@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 const testIpRouteAddress = "routeros_ip_route.test_route"
@@ -60,10 +60,11 @@ provider "routeros" {
 }
 
 resource "routeros_ip_route" "test_route" {
-	distance    = 1
-	dst_address = "10.0.0.0/24"
-	gateway		= "192.168.103.1"
-  }
+	distance      = 1
+	dst_address   = "10.0.0.0/24"
+	gateway		  = "192.168.103.1"
+	check_gateway = "bfd-multihop"
+}
 
 `
 }

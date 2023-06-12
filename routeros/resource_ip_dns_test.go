@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 const testResourceDnsTask = "routeros_dns.test"
@@ -21,11 +21,14 @@ func TestAccResourceDnsTest_basic(t *testing.T) {
 				ProviderFactories: testAccProviderFactories,
 				Steps: []resource.TestStep{
 					{
-						Config: testAccResourceDnsConfig(),
+						Config: testAccResourceDnsConfig(0),
 						Check: resource.ComposeTestCheckFunc(
 							testAccCheckResourceDnsExists(testResourceDnsTask),
 							resource.TestCheckResourceAttr(testResourceDnsTask, "allow_remote_requests", "true"),
 						),
+					},
+					{
+						Config: testAccResourceDnsConfig(1),
 					},
 				},
 			})
@@ -49,13 +52,8 @@ func testAccCheckResourceDnsExists(name string) resource.TestCheckFunc {
 	}
 }
 
-func testAccResourceDnsConfig() string {
-	return `
-
-provider "routeros" {
-	insecure = true
-}
-
+func testAccResourceDnsConfig(n int) string {
+	return providerConfig + `
 resource "routeros_dns" "test" {
 	allow_remote_requests = true
 	cache_max_ttl = "3d"
@@ -65,9 +63,8 @@ resource "routeros_dns" "test" {
 	max_udp_packet_size = 8192
 	query_server_timeout = "500ms"
 	query_total_timeout = "15"
-	servers = "1.1.1.1"
+	servers = "2606:4700:4700::1112,1.1.1.2,2606:4700:4700::1002,1.0.0.2"
 	use_doh_server = "https://cloudflare-dns.com/dns-query"
 	verify_doh_cert = true
-}
-`
+}`
 }

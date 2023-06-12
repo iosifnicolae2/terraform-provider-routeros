@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
-const testInterfaceBridgeAddress = "routeros_bridge.test_bridge"
+const testInterfaceBridgeAddress = "routeros_interface_bridge.test_bridge"
+const testInterfaceBridgeAddressWithSpace = "routeros_interface_bridge.test_bridge_w_space"
 
 func TestAccInterfaceBridgeTest_basic(t *testing.T) {
 	for _, name := range testNames {
@@ -19,13 +20,20 @@ func TestAccInterfaceBridgeTest_basic(t *testing.T) {
 					testSetTransportEnv(t, name)
 				},
 				ProviderFactories: testAccProviderFactories,
-				CheckDestroy:      testCheckResourceDestroy("/interface/bridge", "routeros_bridge"),
+				CheckDestroy:      testCheckResourceDestroy("/interface/bridge", "routeros_interface_bridge"),
 				Steps: []resource.TestStep{
 					{
 						Config: testAccInterfaceBridgeConfig(),
 						Check: resource.ComposeTestCheckFunc(
 							testAccCheckInterfaceBridgeExists(testInterfaceBridgeAddress),
 							resource.TestCheckResourceAttr(testInterfaceBridgeAddress, "name", "test_bridge"),
+						),
+					},
+					{
+						Config: testAccInterfaceBridgeConfig(),
+						Check: resource.ComposeTestCheckFunc(
+							testAccCheckInterfaceBridgeExists(testInterfaceBridgeAddressWithSpace),
+							resource.TestCheckResourceAttr(testInterfaceBridgeAddressWithSpace, "name", "Main bridge"),
 						),
 					},
 				},
@@ -57,9 +65,18 @@ provider "routeros" {
 	insecure = true
 }
 
-resource "routeros_bridge" "test_bridge" {
+resource "routeros_interface_bridge" "test_bridge" {
 	name   = "test_bridge"
-  }
+}
+
+resource "routeros_interface_bridge" "test_bridge_w_space" {
+	name   = "Main bridge"
+	ingress_filtering = true
+	protocol_mode = "rstp"
+	priority = "0x3000"
+	igmp_snooping = true
+	vlan_filtering = true
+}
 
 `
 }

@@ -1,8 +1,10 @@
 package routeros
 
 import (
+	"context"
 	"regexp"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
@@ -12,6 +14,7 @@ func ResourceIPFirewallFilter() *schema.Resource {
 	resSchema := map[string]*schema.Schema{
 		MetaResourcePath: PropResourcePath("/ip/firewall/filter"),
 		MetaId:           PropId(Id),
+		MetaSkipFields:   PropSkipFields(``),
 
 		"action": {
 			Type:        schema.TypeString,
@@ -62,10 +65,10 @@ func ResourceIPFirewallFilter() *schema.Resource {
 				"set, rule will match any unmarked connection.",
 		},
 		"connection_nat_state": {
-			Type:         schema.TypeString,
-			Optional:     true,
-			Description:  "Can match connections that are srcnatted, dstnatted or both.",
-			ValidateFunc: validation.StringInSlice([]string{"srcnat", "dstnat", "!srcnat", "!dstnat"}, false),
+			Type:             schema.TypeString,
+			Optional:         true,
+			Description:      "Can match connections that are srcnatted, dstnatted or both.",
+			ValidateDiagFunc: ValidationMultiValInSlice([]string{"srcnat", "dstnat"}, false, true),
 		},
 		// See comment for the "path_cost" field in resource_interface_bridge_port.go file.
 		"connection_rate": {
@@ -387,7 +390,14 @@ func ResourceIPFirewallFilter() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: DefaultCreate(resSchema),
 		ReadContext:   DefaultRead(resSchema),
-		UpdateContext: DefaultUpdate(resSchema),
+		UpdateContext: func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+			resSchema[MetaSkipFields].Default = `"place_before"`
+			defer func(){
+				resSchema[MetaSkipFields].Default = ``
+			}()
+
+			return ResourceUpdate(ctx, resSchema, d, m)
+		},
 		DeleteContext: DefaultDelete(resSchema),
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,

@@ -16,6 +16,8 @@ import (
 const (
 	MetaId           = "___id___"
 	MetaResourcePath = "___path___"
+	MetaTransformSet = "___ts___"
+	MetaSkipFields   = "___skip___"
 )
 
 const (
@@ -29,6 +31,7 @@ const (
 	KeyInterface   = "interface"
 	KeyInvalid     = "invalid"
 	KeyL2Mtu       = "l2mtu"
+	KeyMacAddress  = "mac_address"
 	KeyMtu         = "mtu"
 	KeyName        = "name"
 	KeyPlaceBefore = "place_before"
@@ -58,6 +61,41 @@ func PropId(t IdType) *schema.Schema {
 		DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
 			return true
 		},
+	}
+}
+
+// PropTransformSet
+func PropTransformSet(s string) *schema.Schema {
+	return &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Default:     s,
+		Description: "<em>A set of transformations for field names. This is an internal service field, setting a value is not required.</em>",
+		DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+			return true
+		},
+	}
+}
+
+// PropSkipFields
+func PropSkipFields(s string) *schema.Schema {
+	return &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Default:     s,
+		Description: "<em>A set of transformations for field names. This is an internal service field, setting a value is not required.</em>",
+		DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+			return true
+		},
+	}
+}
+
+// PropName
+func PropName(description string) *schema.Schema {
+	return &schema.Schema{
+		Type:        schema.TypeString,
+		Required:    true,
+		Description: description,
 	}
 }
 
@@ -120,9 +158,19 @@ var (
 		Computed:    true,
 		Description: "Layer2 Maximum transmission unit.",
 	}
-	PropNameRw = &schema.Schema{
+	PropMacAddressRo = &schema.Schema{
+		Type:        schema.TypeString,
+		Computed:    true,
+		Description: "Current mac address.",
+	}
+	PropNameForceNewRw = &schema.Schema{
 		Type:     schema.TypeString,
 		Required: true,
+		ForceNew: true,
+		Description: `Changing the name of this resource will force it to be recreated.
+	> The links of other configuration properties to this resource may be lost!
+	> Changing the name of the resource outside of a Terraform will result in a loss of control integrity for that resource!
+`,
 	}
 	PropPlaceBefore = &schema.Schema{
 		Type:     schema.TypeString,
@@ -182,7 +230,7 @@ var (
 		"value should be an integer or a time interval: 0..4294967295 (seconds) or 500ms, 2d, 1w")
 	ValidationAutoYesNo = validation.StringInSlice([]string{"auto", "yes", "no"}, false)
 	ValidationIpAddress = validation.StringMatch(
-		regexp.MustCompile(`^$|^!?(\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(/([0-9]|[1-2][0-9]|3[0-2]))?)$`),
+		regexp.MustCompile(`^$|^!?(\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(/([0-9]|[0-9]|[1-2][0-9]|3[0-2]))?)$`),
 		"Allowed addresses should be a CIDR IP address or an empty string",
 	)
 	ValidationMacAddress = validation.StringMatch(
